@@ -36,6 +36,7 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.SerializableString;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.core.JsonGenerator.Feature;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
@@ -50,6 +51,7 @@ public class BsonObjectGenerator extends JsonGenerator {
     private ObjectCodec objectCodec;
     private Node currentNode;
     private boolean closed = false;
+    private boolean writeBigDecimalAsPlainFlag;
 
     public DBObject getDBObject() {
         if (rootNode instanceof ObjectNode) {
@@ -70,17 +72,19 @@ public class BsonObjectGenerator extends JsonGenerator {
 
     @Override
     public JsonGenerator enable(Feature f) {
+    	writeBigDecimalAsPlainFlag = f == Feature.WRITE_BIGDECIMAL_AS_PLAIN;
         return this;
     }
 
     @Override
     public JsonGenerator disable(Feature f) {
+    	writeBigDecimalAsPlainFlag = writeBigDecimalAsPlainFlag && f != Feature.WRITE_BIGDECIMAL_AS_PLAIN;
         return this;
     }
 
     @Override
     public boolean isEnabled(Feature f) {
-        return false;
+    	return (f == Feature.WRITE_BIGDECIMAL_AS_PLAIN && writeBigDecimalAsPlainFlag);
     }
 
     @Override
@@ -254,7 +258,12 @@ public class BsonObjectGenerator extends JsonGenerator {
 
     @Override
     public void writeNumber(BigDecimal dec) throws IOException {
-        setValue(dec);
+    	if (isEnabled(Feature.WRITE_BIGDECIMAL_AS_PLAIN)){
+    		setValue(dec.toPlainString());
+    	}
+    	else{
+    		setValue(dec);
+    	}
     }
 
     @Override
